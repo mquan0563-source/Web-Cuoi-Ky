@@ -1,6 +1,5 @@
 <?php
 date_default_timezone_set('Asia/Ho_Chi_Minh');
-// ⏰ Tăng thời gian sống của session lên 1 ngày (86400 giây)
 ini_set('session.gc_maxlifetime', 86400);
 ini_set('session.cookie_lifetime', 86400);
 
@@ -8,7 +7,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 🔐 Bảo mật: chỉ cho phép giáo viên truy cập
 if (!isset($_SESSION['username']) || ($_SESSION['role'] ?? '') !== 'teacher') {
     header("Location: login.php");
     exit();
@@ -24,7 +22,6 @@ if (!is_dir($dataDir)) {
     mkdir($dataDir, 0777, true);
 }
 
-// 🗄️ Tải danh sách kết quả thi của học sinh
 $default_students = [];
 if (file_exists($resultsFile)) {
     $default_students = json_decode(file_get_contents($resultsFile), true);
@@ -33,7 +30,6 @@ if (!is_array($default_students)) {
     $default_students = [];
 }
 
-// 🗄️ Tải danh sách thí sinh đang làm bài
 $activeSessions = [];
 if (file_exists($activeSessionsFile)) {
     $activeSessions = json_decode(file_get_contents($activeSessionsFile), true);
@@ -42,7 +38,6 @@ if (!is_array($activeSessions)) {
     $activeSessions = [];
 }
 
-// 🗄️ Tải trạng thái đề thi
 $examStatus = [];
 if (file_exists($examStatusFile)) {
     $examStatus = json_decode(file_get_contents($examStatusFile), true);
@@ -54,7 +49,6 @@ if (!is_array($examStatus)) {
 $msg_success = "";
 $msg_error = "";
 
-// 📝 Xử lý: thêm câu hỏi thủ công (giữ nguyên logic cũ)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_manual'])) {
     $subjectId = trim($_POST['subjectId'] ?? '');
     $questionText = trim($_POST['question'] ?? '');
@@ -93,7 +87,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_manual'])) {
     }
 }
 
-// 📂 Xử lý: import đề thi từ file JSON (giữ nguyên logic cũ)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['upload_file'])) {
     if (isset($_FILES['exam_file']) && $_FILES['exam_file']['error'] === UPLOAD_ERR_OK) {
         $fileTmpPath = $_FILES['exam_file']['tmp_name'];
@@ -141,7 +134,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['upload_file'])) {
     }
 }
 
-// 👉 Xử lý: Xóa đề thi theo môn (tác động trực tiếp vào questions.json)
 if ($_SERVER["REQUEST_METHOD"] === "GET" && isset($_GET['delete_subject'])) {
     $subjectToDelete = trim($_GET['delete_subject']);
 
@@ -163,7 +155,6 @@ if ($_SERVER["REQUEST_METHOD"] === "GET" && isset($_GET['delete_subject'])) {
     }
 }
 
-// 👉 Xử lý: Cập nhật trạng thái đề thi (Approved/Pending) - giữ nguyên logic cũ
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_status'])) {
     $subjectId = trim($_POST['subjectId'] ?? '');
     $newStatus = trim($_POST['status'] ?? '');
@@ -193,7 +184,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_status'])) {
     }
 }
 
-// 👉 Xử lý: hủy phiên làm bài của thí sinh
 if ($_SERVER["REQUEST_METHOD"] === "GET" && isset($_GET['kick_user'])) {
     $userKick = trim($_GET['kick_user']);
     if (isset($activeSessions[$userKick])) {
@@ -205,7 +195,6 @@ if ($_SERVER["REQUEST_METHOD"] === "GET" && isset($_GET['kick_user'])) {
     }
 }
 
-// 👉 Thống kê số học sinh đang làm bài
 $studentsDoingExam = 0;
 foreach ($default_students as $res) {
     if (($res['status'] ?? '') === 'doing') {
@@ -213,7 +202,6 @@ foreach ($default_students as $res) {
     }
 }
 
-// 👉 Đọc ngân hàng câu hỏi từ questions.json
 $questionsList = [];
 if (file_exists($questionsFile)) {
     $questionsList = json_decode(file_get_contents($questionsFile), true);
@@ -222,7 +210,6 @@ if (!is_array($questionsList)) {
     $questionsList = [];
 }
 
-// 👉 Danh sách môn học
 $subjectNames = [
     'Toan' => 'Toán học',
     'Web' => 'Lập trình Web',
@@ -805,32 +792,40 @@ $subjectNames = [
                     </tr>
                     </thead>
                     <tbody>
-                    <?php if (count($questionsList) > 0): ?>
-                        <?php foreach ($questionsList as $index => $q): ?>
-                            <tr>
-                                <td><?php echo $index + 1; ?></td>
-                                <td style="font-weight:800;color:#3b82f6;"><?php echo htmlspecialchars($q['subjectId'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($q['examCode'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($q['displayNum'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($q['question'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($q['A'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($q['B'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($q['C'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($q['D'] ?? ''); ?></td>
-                                <td style="font-weight:800;color:var(--success);"><?php echo htmlspecialchars($q['correct'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($q['difficulty'] ?? ''); ?></td>
-                                <td>
-                                    <a href="view_exam.php?subject=<?php echo urlencode($q['subjectId'] ?? ''); ?>" class="btn-small" style="background:var(--primary);">Sửa</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="12" style="text-align:center;padding:24px;color:var(--text-muted);">
-                                Kho dữ liệu câu hỏi trống.
-                            </td>
-                        </tr>
-                    <?php endif; ?>
+                  <?php if (count($questionsList) > 0): ?>
+    <?php 
+    $globalIndex = 1; 
+    foreach ($questionsList as $subId => $subQuestions): 
+        if (!is_array($subQuestions)) continue; 
+        foreach ($subQuestions as $q): 
+    ?>
+        <tr>
+            <td><?php echo $globalIndex++; ?></td>
+            <td style="font-weight:800;color:#3b82f6;"><?php echo htmlspecialchars($subId); ?></td>
+            <td><?php echo htmlspecialchars($q['examCode'] ?? 'Chưa rõ'); ?></td>
+            <td><?php echo htmlspecialchars($q['displayNum'] ?? '---'); ?></td>
+            <td><?php echo htmlspecialchars($q['question'] ?? ''); ?></td>
+            <td><?php echo htmlspecialchars($q['A'] ?? ''); ?></td>
+            <td><?php echo htmlspecialchars($q['B'] ?? ''); ?></td>
+            <td><?php echo htmlspecialchars($q['C'] ?? ''); ?></td>
+            <td><?php echo htmlspecialchars($q['D'] ?? ''); ?></td>
+            <td style="font-weight:800;color:var(--success);"><?php echo htmlspecialchars($q['correct'] ?? ''); ?></td>
+            <td><?php echo htmlspecialchars($q['difficulty'] ?? 'Thường'); ?></td>
+            <td>
+                <a href="view_exam.php?subject=<?php echo urlencode($subId); ?>" class="btn-small" style="background:var(--primary);">Sửa</a>
+            </td>
+        </tr>
+    <?php 
+        endforeach; 
+    endforeach; 
+    ?>
+<?php else: ?>
+    <tr>
+        <td colspan="12" style="text-align:center;padding:24px;color:var(--text-muted);">
+            Kho dữ liệu câu hỏi trống.
+        </td>
+    </tr>
+<?php endif; ?>
                     </tbody>
                 </table>
             </div>
